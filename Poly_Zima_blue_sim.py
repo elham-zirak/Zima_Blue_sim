@@ -8,6 +8,7 @@ import tifffile as tf                       # for writing the image as tiff file
 ############################################ Import Modules in Python for GUI #################################################
 
 import tkinter as tk                        # for graphical user interface
+
 """ acess classes from tkinter module, ttk: Tk themed widget set,
 messagebox shows dialogues for errors
 filedialog for showing the contrast value and save image
@@ -15,12 +16,11 @@ filedialog for showing the contrast value and save image
 from tkinter import ttk, messagebox, filedialog    
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg     # create canvas and embed plots in it
 from matplotlib.figure import Figure        # for creating figure object
-from matplotlib import pyplot as plt        # for saving the image
 
 ##################################### defining attenuation coefficient dictionaries ###########################################
 
 # arguments: XmuDat data directory, seperator is space and there is no header
-df = pd.read_csv('../Code/attenuation_coefficeint_data.txt', sep='\s+', header = None)
+df = pd.read_csv('../Code/attenuation_coefficeint_data.txt', sep = '\s+', header = None)
 # define headers for columns in dataframe by assigning names for columns
 df.columns = ['Energy', 'tissue', 'water', 'bone', 'calcium', 'iodinated water']
 # define a dictionary of density of input materials in g/cm^3 (based on XmuDat)
@@ -76,7 +76,7 @@ tk.Label(frm, text = 'Filteration material').grid(column = 0, row = 5)
 tk.Label(frm, text = 'Filteration thickness (mm)').grid(column = 0, row = 6)
 
 # labels for Phantom and Geometrial Properties
-tk.Label(frm, text = 'Phantom and Geometrial Properties', bg = '#18BBF7').grid(column = 2, row = 0)
+tk.Label(frm, text = 'Phantom and Geometrial Properties', bg = '#3fc8f9').grid(column = 2, row = 0)
 tk.Label(frm, text = 'Object composition').grid(column = 2, row = 1)
 tk.Label(frm, text = 'Object thickness (cm)').grid(column = 2, row = 2)
 tk.Label(frm, text = 'Detail composition').grid(column = 2, row = 3)
@@ -94,7 +94,7 @@ tk.Label(frm, text = 'Scatter to Primary Ratio').grid(column = 4, row = 3)
 ################################# Creating entry fields ###################################
 
 # tk.Entry(parent, width)
-# insert(index, str), insert(0, preset_values['name of variable]) inserts the preset value for kVp at index 0
+# insert(index, str), insert(0, preset_values['name of variable']) inserts the preset value for kVp at index 0
 # grid(coulmn, row) is used for geometry management.
 
 ''' entry fields for X-ray tube '''
@@ -229,7 +229,7 @@ def calculate():
     sdd = float(sdd_ent.get())                  # source-detector distance
     ssd = float(ssd_ent.get())                  # source-skin (object) distance
     obj_material = obj_ent.get()                # object type
-    det_material = det_ent.get()                # detail type 
+    det_material = det_ent.get()                # detail type
     det_rad_cm = float(det_radius.get())        # detail radius in cm
     xobj = float(xobj_ent.get())                # object thickness
     xdet = float(xdet_ent.get())                # detail thickness
@@ -242,7 +242,7 @@ def calculate():
     # entries used for image formation
     pixel = float(pixel_size.get())                 # piexel size
     scatter_ratio = float(scatter_ent.get())        # scatter to primary ratio
-    field_of_view = float(FOV_ent.get())             # field of view
+    field_of_view = float(FOV_ent.get())            # field of view
     
     # basic calculations for image formation
     matrix = int(field_of_view/pixel)               # defining number of pixels in every direction of field of view
@@ -279,7 +279,8 @@ def calculate():
     # create X-ray spectrum with given kilovoltage peak, anode material and angle and tube load in distance z (SSD),
     # before entering the phantom with inherent filteration
     # Spek(kvp, th, targ, mas, x, y, z, physics, mu_data_source, dk)
-    # filter('Al', 1) method accounts for inherent filtration of X-ray tube
+    # A useful and handy resource on SpekPy: https://bitbucket.org/spekpy/spekpy_release/wiki/Home
+    # filter('Al', 1) method accounts for inherent filtration of X-ray tube which is equivalent to 0.5-1 mm Al (see Farr's physics for medical imaging 1997- p29)
     s = sp.Spek(kvp = kvp_data, th = theta, targ = targ_data, mas = mas_data, z = ssd, physics = 'kqp', mu_data_source = 'pene', dk = 1).filter('Al', 1)
         
     # filteration: filter material and thickness are the arguments of filter method in SpekPy
@@ -303,19 +304,20 @@ def calculate():
     ############################### fluence of X-ray spectrum (photons/cm^2) after attenuation ##################################
     
     # Calculate number of photons using Beer-Lambert's law
-    # Iterate over energy levels (k) and corresponding photon counts (f)
-    # number of photons is defined using the Beer Lamber's law
-    # This loop iterates over k and f values previously generated and zipped as a pair.
-    # i is the energy, obj_dict[i] gives the linear attenuation coefficient for energy i
-    # j is the number of photons in i energy (recall X-ray spectrum)
-
-    # in this line, we tell the Python to make a zip of calculated values for k and f in previous part
-    # The zip function pairs energy bins with fluences of the X-ray spectrum, allowing for simultaneous iteration over both arrays.
-    # # and then the second item in each passed iterator are paired together  
+    # zip(k,f) means make a pair of calculated values for k and f in previous part,
+    # where k is energy bin and f is correspodng fluences of X-ray spectrum
+    # for loop iterates over k and f, i.e.
+    # gives the energy bin (k) to obj_dict[i], which returns the value of linear attenuation coefficient based on energy and selected material by user
+    # and gives the corresponding j to multply it by the exponentional part (np.exp : use numpy exponentional function for calculation)
+    # n_out = number of photons per cm^2 outside the detail, which degrades exponentionally (Beer-Lambert's law)
+    # n_in = number of photons per cm^2 passing through the detail
+    
     for i, j in zip(k, f):
         n_out += j * np.exp(-obj_dict[i]*xobj)
         n_in += j * np.exp(-obj_dict[i]*(xobj-xdet)-(det_dict[i]*xdet))
-    
+
+ ######################################### Rescaling number of photons after attenuation ####################################
+
     # Rescaling using Inverse square law
     n_in = (ssd**2/sdd**2) * n_in
     n_out = (ssd**2/sdd**2) * n_out
@@ -344,10 +346,10 @@ def calculate():
     
     ################################################## add statistical noise ############################################# 
     
-    # using np.random.poisson(lam) fo adding quantum mottle to the image
+    # using np.random.poisson(lam) fo adding quantum mottle (noise) to the image due to the statistical fluctuations in the number of photons
     # lam (lambda) is indeed the expected number of events in a fixed-time interval. In X-ray imaging,
     # this corresponds to the expected number of photons hitting a particular detector pixel during the exposure time
-    # lam = ii means 
+    # lam = ii means setting the expected value in poisson function to the value of photons in each pixel by coordinates (x,y)
     img_ran = img_out                   # defining a new variable as img_ran which is initially the img_out
     for x in range(matrix):             # for every x in the range of matrix size
          for y in range(matrix):        # for every y in the range of matrix size (so we cover the whole image)        
@@ -388,7 +390,7 @@ def Display_image():
 
 # define show_contrast function, so when the user clicks on contrast button, it calls this function.
 def show_contrast():
-    # set title and messge of the message box, use f sting method to show txt and show the contrast value to 4 decimal places
+    # set title and messge of the message box, use f string method to show txt and show the contrast value in 4 decimal places
     messagebox.showinfo(title= 'Contrast', message = f'The contrast is: {contrast:.4f}')
 
 ################################################ saving image ######################################################
@@ -404,7 +406,7 @@ def save_image():
     if file_path:                               # if the filepath was selected by the user:
         tf.imwrite(file_path, img_32bit)        # save img_32bit in the filepath
         messagebox.showinfo("Success", f"Image saved successfully as 32-bit TIFF to {file_path}") # show this message after saving
-        
+
 ############################################### define submit buttons ###############################################
 
 # define Calculate button in the frame placed in 1*10 to activate calculate function
