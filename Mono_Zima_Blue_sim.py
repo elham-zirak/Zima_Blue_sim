@@ -12,18 +12,19 @@ import tkinter as tk                        # for graphical user interface
 messagebox shows dialogues for errors
 filedialog for showing the contrast value and save image
 """
-from tkinter import ttk, messagebox, filedialog    
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg     # create canvas and embed plots in it
-from matplotlib.figure import Figure                                # for creating figure object
-from matplotlib import pyplot as plt                                # for saving the image
+from tkinter import ttk, messagebox, filedialog
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg     # create canvas and embed plots in it, used for saving image
+from matplotlib.figure import Figure                                # for creating figure object used for saving image
 
 ##################################### defining attenuation coefficient dictionaries ###########################################
 
+# data retrived from XmuDat, for tissue, water (representing a soft tomour), bone and calcium (representing calcification)
+# and iodinated water (99% water + 1% iodine) representing a contrast agent
 # arguments: XmuDat data directory, seperator is space and there is no header
-df = pd.read_csv('../Code/attenuation_coefficeint_data.txt', sep='\s+', header = None)
+df = pd.read_csv('attenuation_coefficeint_data.txt', sep='\s+', header = None)
 # define headers for columns in dataframe by assigning names for columns
 df.columns = ['Energy', 'tissue', 'water', 'bone', 'calcium', 'iodinated water']
-# define a dictionary of density of input materials in g/cm^3 (based on XmuDat)
+# define a dictionary of density of input materials in g/cm³ (based on XmuDat)
 density = {'tissue' :1, 'water' : 1, 'bone' : 1.85, 'calcium' : 1.55, 'iodinated water': 1.01}
 
 # converting columns of df (dataframe) to list for further use in dictionary, note that XmuDat gives mu/density,
@@ -48,6 +49,7 @@ all_mu = {'tissue': mu_tissue_dict, 'water': mu_water_dict, 'bone': mu_bone_dict
 
 ################################################ pre-set values #############################################################
 
+# defining a dictionary of pre-set values, dictionary = {'key_1': value_1, 'key_2': value_2, ....}
 preset_values = { 'n0_ent': 100000000, 'mono_energy_ent': 20 ,'obj_ent': 'tissue', 'det_ent': 'calcium', 'sdd_ent': 60,
                  'ssd_ent': 50, 'pixel_size': 0.01, 'FOV_ent': 2, 'scatter_ent': 0, 'det_radius': 0.25, 'xdet_ent': 0.1,
                   'xobj_ent': 5}
@@ -71,8 +73,8 @@ tk.Label(frm, text = 'X-ray inputs', bg = '#18BBF7').grid(column = 0, row = 0)
 tk.Label(frm, text = 'Energy (keV)').grid(column = 0, row = 1)
 tk.Label(frm, text = 'Number of incident \nphotons/cm\u00B2 at source').grid(column = 0, row = 2)
 
-# labels for Phantom and Geometrial Properties
-tk.Label(frm, text = 'Phantom and Geometrial Propertie', bg = '#18BBF7').grid(column = 2, row = 0)
+# labels for Phantom and Geometrical Properties
+tk.Label(frm, text = 'Phantom and Geometrical Propertie', bg = '#18BBF7').grid(column = 2, row = 0)
 tk.Label(frm, text = 'object composition').grid(column = 2, row = 1)
 tk.Label(frm, text = 'object thickness (cm)').grid(column = 2, row = 2)
 tk.Label(frm, text = 'detail composition').grid(column = 2, row = 3)
@@ -100,12 +102,12 @@ mono_energy_ent = tk.Entry(frm, width=10)
 mono_energy_ent.insert(0, str(preset_values['mono_energy_ent']))
 mono_energy_ent.grid(column = 1, row = 1)
 
-# number of incident photons per cm^2 cm entry
+# number of incident photons per cm² entry
 n0_ent = tk.Entry(frm, width=10)
 n0_ent.insert(0, str(preset_values['n0_ent']))
 n0_ent.grid(column = 1, row = 2)
 
-''' entry fields for Phantom and Geometrial Properties '''
+''' entry fields for Phantom and Geometrical Properties '''
 
 # object thickness entry
 xobj_ent = tk.Entry(frm, width=10)
@@ -147,15 +149,15 @@ FOV_ent.grid(column = 5, row = 2)
 ################################# Creating Option menus ####################################
 
 # defining list of choices for option menus
-object_lst = ['tissue']                                             # bject composition
-detail_lst = ['water', 'bone', 'calcium', 'iodinated water']        # detail composition
+object_lst = ['tissue']                                             # object composition, although it is one material, it has been made as a list so users can further add more materials
+detail_lst = ['water', 'bone', 'calcium', 'iodinated water']        # detail composition list
 R_lst = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]         # scatter to primary ratio list
 
 # tk.StringVar(parent) returns a StringVar (control variable) instance for tk.OptionMenu() variable
-# set() function 
-# tk.OptionMenu (parent, variable, list of choices), the parent is the frame, variable shoudl be StrVariable instance and the list of choices are 
+# set() function is used to assign previously defined preset values to the StringVar created
+# tk.OptionMenu (parent, variable, list of choices), the parent is the frame, variable should be StrVariable instance and the list of choices are 
 
-''' option menus for Phantom and Geometrial Properties '''
+''' option menus for Phantom and Geometrical Properties '''
 
 # object material option menu
 obj_ent = tk.StringVar(frm)
@@ -186,7 +188,8 @@ def calculate():
 
     # entries for X-ray beam
     mono_energy_data = float(mono_energy_ent.get())     # monochromatic X-ray energy (keV)
-    n0_data = float(n0_ent.get())                       # number of incident photons per cm^2
+    n0_data = float(n0_ent.get())                       # number of incident photons per cm²
+
         
     # entries for geometry and phantom properties
     sdd = float(sdd_ent.get())                  # source-detector distance
@@ -213,23 +216,34 @@ def calculate():
     
     #################################################### Errors #############################################################
 
-    #show error if energy is not between 1-101 keV:
-    if mono_energy_data < 1 or mono_energy_data > 100:
-        messagebox.showerror('Energy Error', 'choose energy between 1 and 100 keV')
+    # show error if energy is not between 10-101 keV:
+    if mono_energy_data < 10 or mono_energy_data > 100:
+        messagebox.showerror('Energy Error', 'Enter energy between 10 and 100 keV')
 
-    #setting condition that object thickness must be greater than detail thickness
+    # setting condition that object thickness must be greater than detail thickness
     if xdet >= xobj:
-        messagebox.showerror('Geometry Error', 'choose object thickness larger than detail thickness')
+        messagebox.showerror('Geometry Error', 'Enter object thickness larger than detail thickness')
     
-    #setting condition that SDD (source detector distance) must be greater than SSD (source skin distance)
+    # setting condition that SDD (source detector distance) must be greater than SSD (source skin distance)
     if ssd >= sdd:
-        messagebox.showerror('Geometry Error', 'choose source skin distance smaller than source detector distance')
+        messagebox.showerror('Geometry Error', 'Enter source skin distance smaller than source detector distance')
 
+    # setting condition that FOV (field of view) must be greater than detail radius to form the image.
+    if det_rad_cm >= field_of_view:
+        messagebox.showerror('Geometry Error', 'Enter field of view larger than detail radius')
+
+    ############################### fluence of X-ray spectrum (photons/cm²) after attenuation ##################################
+
+    # calculate number of photons using Beer-Lambert's law
+    # obj_dict and det_dict give the linear attenuation coefficient based on the energy and material selected by user
+    # np.exp : use numpy exponentional function for calculation
+    # n_out = number of photons per cm² outside the detail, which degrades exponentionally (Beer-Lambert's law)
+    # n_in = number of photons per cm² passing through the detail
+    n_out = n0_data *np.exp(-obj_dict*xobj)                                # photons/cm² in the background
+    n_in = n0_data *np.exp((-obj_dict*(xobj-xdet))-(det_dict*(xdet)))      # photons/cm² behind the detail
+        
     ###################################### Rescaling using Inverse square law ############################################
                      
-    n_out = n0_data *np.exp(-obj_dict*xobj)                                # photons/cm^2 in the background
-    n_in = n0_data *np.exp((-obj_dict*(xobj-xdet))-(det_dict*(xdet)))      # photons/cm^2 behind the detail
-
     # Rescaling using Inverse square law
     n_in = (ssd**2/sdd**2) * n_in
     n_out = (ssd**2/sdd**2) * n_out
@@ -258,10 +272,10 @@ def calculate():
     
         ################################################## add statistical noise ############################################# 
     
-    # using np.random.poisson(lam) fo adding quantum mottle to the image
+    # using np.random.poisson(lam) fo adding quantum mottle (noise) to the image due to the statistical fluctuations in the number of photons
     # lam (lambda) is indeed the expected number of events in a fixed-time interval. In X-ray imaging,
     # this corresponds to the expected number of photons hitting a particular detector pixel during the exposure time
-    # lam = ii means 
+    # lam = ii means setting the expected value in poisson function to the value of photons in each pixel by coordinates (x,y)
     img_ran = img_out                   # defining a new variable as img_ran which is initially the img_out
     for x in range(matrix):             # for every x in the range of matrix size
          for y in range(matrix):        # for every y in the range of matrix size (so we cover the whole image)        
