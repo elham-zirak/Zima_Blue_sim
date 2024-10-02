@@ -13,17 +13,19 @@ import tkinter as tk                        # for graphical user interface
 messagebox shows dialogues for errors
 filedialog for showing the contrast value and save image
 """
-from tkinter import ttk, messagebox, filedialog    
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg     # create canvas and embed plots in it
-from matplotlib.figure import Figure        # for creating figure object
+from tkinter import ttk, messagebox, filedialog
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg     # create canvas and embed plots in it, used for saving image
+from matplotlib.figure import Figure                                # for creating figure object used for saving image
 
 ##################################### defining attenuation coefficient dictionaries ###########################################
 
+# data retrived from XmuDat, for tissue, water (representing a soft tomour), bone and calcium (representing calcification)
+# and iodinated water (99% water + 1% iodine) representing a contrast agent
 # arguments: XmuDat data directory, seperator is space and there is no header
-df = pd.read_csv('../Code/attenuation_coefficeint_data.txt', sep = '\s+', header = None)
+df = pd.read_csv('attenuation_coefficeint_data.txt', sep = '\s+', header = None)
 # define headers for columns in dataframe by assigning names for columns
 df.columns = ['Energy', 'tissue', 'water', 'bone', 'calcium', 'iodinated water']
-# define a dictionary of density of input materials in g/cm^3 (based on XmuDat)
+# define a dictionary of density of input materials in g/cm³ (based on XmuDat)
 density = {'tissue' :1, 'water' : 1, 'bone' : 1.85, 'calcium' : 1.55, 'iodinated water': 1.01}
 
 # converting columns of df (dataframe) to list for further use in dictionary, note that XmuDat gives mu/density,
@@ -48,6 +50,7 @@ all_mu = {'tissue': mu_tissue_dict, 'water': mu_water_dict, 'bone': mu_bone_dict
 
 ################################################ pre-set values #############################################################
 
+# defining a dictionary of pre-set values, dictionary = {'key_1': value_1, 'key_2': value_2, ....}
 preset_values = {'kvp_ent': 100, 'targ_ent': 'W', 'theta_ent': 12, 'mas_ent': 100, 'filter_ent': 'Al', 'xfilter_ent': 3,
                  'obj_ent': 'tissue', 'det_ent': 'iodinated water', 'sdd_ent': 150, 'ssd_ent': 100, 'pixel_size': 0.005, 'FOV_ent': 2,
                  'scatter_ent': 0, 'det_radius': 0.5, 'xdet_ent': 0.5, 'xobj_ent': 5}
@@ -75,8 +78,8 @@ tk.Label(frm, text = 'Tube load (mAs)').grid(column = 0, row = 4)
 tk.Label(frm, text = 'Filteration material').grid(column = 0, row = 5)
 tk.Label(frm, text = 'Filteration thickness (mm)').grid(column = 0, row = 6)
 
-# labels for Phantom and Geometrial Properties
-tk.Label(frm, text = 'Phantom and Geometrial Properties', bg = '#3fc8f9').grid(column = 2, row = 0)
+# labels for Phantom and Geometrical Properties
+tk.Label(frm, text = 'Phantom and Geometrical Properties', bg = '#3fc8f9').grid(column = 2, row = 0)
 tk.Label(frm, text = 'Object composition').grid(column = 2, row = 1)
 tk.Label(frm, text = 'Object thickness (cm)').grid(column = 2, row = 2)
 tk.Label(frm, text = 'Detail composition').grid(column = 2, row = 3)
@@ -119,7 +122,7 @@ xfilter_ent = tk.Entry(frm, width=10)
 xfilter_ent.insert(0, str(preset_values['xfilter_ent']))
 xfilter_ent.grid(column = 1, row = 6)
 
-''' entry fields for Phantom and Geometrial Properties '''
+''' entry fields for Phantom and Geometrical Properties '''
 
 # object thickness entry
 xobj_ent = tk.Entry(frm, width=10)
@@ -163,13 +166,13 @@ FOV_ent.grid(column = 5, row = 2)
 # defining list of choices for option menus
 target_lst = ['W', 'Mo', 'Rh']                                      # target material, restricted by SpekPy limitations 
 filter_lst = ['Al', 'Mo', 'Sn', 'Cu']                               # filter material, 
-object_lst = ['tissue']                                             # bject composition
-detail_lst = ['water', 'bone', 'calcium', 'iodinated water']        # detail composition
+object_lst = ['tissue']                                             # object composition, although it is one material, it has been made as a list so users can further add more materials
+detail_lst = ['water', 'bone', 'calcium', 'iodinated water']        # detail composition list
 R_lst = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]         # scatter to primary ratio list
 
 # tk.StringVar(parent) returns a StringVar (control variable) instance for tk.OptionMenu() variable
-# set() function 
-# tk.OptionMenu (parent, variable, list of choices), the parent is the frame, variable shoudl be StrVariable instance and the list of choices are 
+# set() function is used to assign previously defined preset values to the StringVar created
+# tk.OptionMenu (parent, variable, list of choices), the parent is the frame, variable should be StrVariable instance and the list of choices are 
 
 ''' option menus for X-ray tube '''
 
@@ -185,7 +188,7 @@ filter_ent.set(preset_values['filter_ent'])
 filter_opt = tk.OptionMenu(frm, filter_ent, *filter_lst)
 filter_opt.grid(column = 1, row = 5)
 
-''' option menus for Phantom and Geometrial Properties '''
+''' option menus for Phantom and Geometrical Properties '''
 
 # object material option menu
 obj_ent = tk.StringVar(frm)
@@ -250,29 +253,33 @@ def calculate():
 
     #################################################### Errors #############################################################
     
-    # show error if kVp is not 10-100 kV for Mo target
+    # show error if kVp is not 10-100 kV (Dataset limitation from XmuDat)
     if float(kvp_data) not in range(10,101):
-        messagebox.showerror('kVp Error', 'choose kilovoltage peak between 10 and 100 kV')
+        messagebox.showerror('kVp Error', 'Enter kilovoltage peak between 10 and 100 kV')
     
-    # show error if kVp is not 20-50 kV for Mo target
+    # show error if kVp is not 20-50 kV for Mo target (SpekPy limitation)
     if float(kvp_data) not in range(20,51) and targ_data == 'Mo':
-        messagebox.showerror('kVp Error', 'choose kilovoltage peak between 20 and 50 kV for Molybdenum target material')
+        messagebox.showerror('kVp Error', 'Enter kilovoltage peak between 20 and 50 kV for Molybdenum target material')
 
-    # show error if kVp is not 20-50 kV for Rh target
+    # show error if kVp is not 20-50 kV for Rh target (SpekPy limitation)
     if float(kvp_data) not in range(20,51) and targ_data == 'Rh':
-        messagebox.showerror('kVp Error', 'choose kilovoltage peak between 20 and 50 kV for Rhodium target material')
+        messagebox.showerror('kVp Error', 'Enter kilovoltage peak between 20 and 50 kV for Rhodium target material')
     
-    # show error if target angle is not in 1-180 range
+    # show error if target angle is not in 7-20 range (clinical practice anode angle)
     if theta not in range(7,21):
-        messagebox.showerror('Anode angle Error', 'choose target angle between 7 and 20 degrees, with 1.0 increments')
+        messagebox.showerror('Anode angle Error', 'Enter target angle between 7 and 20 degrees, with 1.0 increments')
 
     # setting condition that object thickness must be greater than detail thickness
     if xdet >= xobj:
-        messagebox.showerror('Geometry Error', 'choose object thickness larger than detail thickness')
+        messagebox.showerror('Geometry Error', 'Enter object thickness larger than detail thickness')
     
     # setting condition that SDD (source detector distance) must be greater than SSD (source skin distance)
     if ssd >= sdd:
-        messagebox.showerror('Geometry Error', 'choose source skin distance smaller than source detector distance')
+        messagebox.showerror('Geometry Error', 'Enter source skin distance smaller than source detector distance')
+    
+    # setting condition that FOV (field of view) must be greater than detail radius to form the image.
+    if det_rad_cm >= field_of_view:
+        messagebox.showerror('Geometry Error', 'Enter field of view larger than detail radius')
     
     ############################### getting X-ray spectra ####################################################
     
@@ -286,7 +293,7 @@ def calculate():
     # filteration: filter material and thickness are the arguments of filter method in SpekPy
     s.filter(matl = filter_data, t = xfilter_data)
 
-    # get the spectrum, k is the energy and f is the fluence of photons (number of photons/ cm^2)
+    # get the spectrum, k is the energy and f is the fluence of photons (number of photons/ cm²)
     k, f = s.get_spectrum(edges = True)
 
     # Using slicing method to remove duplicated values from k and f generated by get_spectrum method in SpekPy
@@ -301,16 +308,16 @@ def calculate():
     # defining n_in with initial value of 0, which shows the number of photons passing through the detail
     n_in = 0                                             
 
-    ############################### fluence of X-ray spectrum (photons/cm^2) after attenuation ##################################
+    ############################### fluence of X-ray spectrum (photons/cm²) after attenuation ##################################
     
-    # Calculate number of photons using Beer-Lambert's law
+    # calculate number of photons using Beer-Lambert's law
     # zip(k,f) means make a pair of calculated values for k and f in previous part,
     # where k is energy bin and f is correspodng fluences of X-ray spectrum
     # for loop iterates over k and f, i.e.
     # gives the energy bin (k) to obj_dict[i], which returns the value of linear attenuation coefficient based on energy and selected material by user
     # and gives the corresponding j to multply it by the exponentional part (np.exp : use numpy exponentional function for calculation)
-    # n_out = number of photons per cm^2 outside the detail, which degrades exponentionally (Beer-Lambert's law)
-    # n_in = number of photons per cm^2 passing through the detail
+    # n_out = number of photons per cm² outside the detail, which degrades exponentionally (Beer-Lambert's law)
+    # n_in = number of photons per cm² passing through the detail
     
     for i, j in zip(k, f):
         n_out += j * np.exp(-obj_dict[i]*xobj)
@@ -361,7 +368,7 @@ def calculate():
     # get the mean n_in where the coordinates are smaller than detail radius in pixel (inside the detail)
     n_in_avg = np.mean(img_ran[x_coord**2 + y_coord**2 < det_rad_pixel**2])
     
-    # get the mean n_in where the coordinates are greater than or equal to detail radius in pixel (outside the detail)
+    # get the mean n_out where the coordinates are greater than or equal to detail radius in pixel (outside the detail)
     n_out_avg = np.mean(img_ran[x_coord**2 + y_coord**2 >= det_rad_pixel**2])
     
     # define local (Weber) contrast as the difference between average number of photons per pixel outside and inside the detail, divided by the background (outside the detail)
