@@ -165,7 +165,7 @@ FOV_ent.grid(column = 5, row = 2)
 
 # defining list of choices for option menus
 target_lst = ['W', 'Mo', 'Rh']                                      # target material, restricted by SpekPy limitations 
-filter_lst = ['Al', 'Mo', 'Sn', 'Cu']                               # filter material, 
+filter_lst = ['Al', 'Mo', 'Cu', 'Pd']                               # filter material, 
 object_lst = ['tissue']                                             # object composition, although it is one material, it has been made as a list so users can further add more materials
 detail_lst = ['water', 'bone', 'calcium', 'iodinated water']        # detail composition list
 R_lst = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]         # scatter to primary ratio list
